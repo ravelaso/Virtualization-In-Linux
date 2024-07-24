@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE instance-profile
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/product-profile.dtd">
+
+<instance-profile id="gs"
+                 name="How To Virtualize"
+                 start-page="GettingStarted.md">
+
+    <toc-element topic="GettingStarted.md"/>
+    <toc-element topic="Setup-VirtualMachine.md"/>
+    <toc-element topic="VM-Configuration.md"/>
+</instance-profile>
