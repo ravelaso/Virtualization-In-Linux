@@ -1,27 +1,21 @@
 # Getting Started
 
-Here is what I've learned regarding Virtualization in Arch Linux (btw)
+This guide will take you through my experiences with virtualization on Arch Linux, and by the end, you will have a fully functioning Windows 11 Virtual Machine (VM) with GPU NVIDIA pass-through, seamless mouse and keyboard capture.
 
-At the end of this guide we will have a nice Windows 11 VM with pass-through GPU NVIDIA, 
-and seamless capture of mouse and keyboard.
+The tools we'll be using for this setup are **KVM / QEMU** as the virtualization platform, **libvirt** as the management API, and **virt-manager** for the user interface.
 
-We will use **KVM / QEMU** with **libvirt** and our GUI will be **virt-manager**
+For audio, my Arch Linux utilizes PipeWire, which allows us to send guest audio back to the host without needing a virtual monitor attachment.
 
-Arch Linux uses PipeWire for audio 
-(this we'll use for sending guest audio back to host, without the needs of a virtual monitor attached)
+Please note that we won't be using **Spice** or **Looking Glass**, so you will need a monitor connected to your PCI GPU.
 
-I won't use **Spice** or **Looking Glass**, therefore you will need to use a monitor hooked into your PCI GPU.
+## Prerequisites
 
-## Before you start
+Before starting, please ensure the following requirements are met:
 
-List of the prerequisites that are required or recommended.
+- Your CPU and Motherboard (MB) must support Virtualization / IOMMU.
+- You should have at least two GPUs. An internal GPU from an Intel/AMD CPU chip (APU) can work as one of them.
 
-Make sure that:
-
-- First: Your CPU and your MB Must be compatible with Virtualization, IOMMU.
-- Second: You have at least 2 GPUS, internal GPU from an intel/amd CPU chip (APU) works.
-
-We are going to also follow the reference from this wiki [Arch Wiki](https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF)
+This guide also references the [Arch Wiki](https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF), so you might find additional helpful information there.
 
 ## 1. Setting up BIOS
 
@@ -64,7 +58,6 @@ Ensure Your Kernel Supports IOMMU and VFIO:
 LC_ALL=C.UTF-8 lscpu | grep Virtualization
 ```
 
-
 See kernel support:
 
 ```Bash
@@ -82,7 +75,7 @@ We are going to configure GRUB first.
 sudo nano /etc/default/grub
 ```
 
-Add intel or amd iommu to on:
+Add Intel / AMD iommu set to on:
 
 ```Bash
  GRUB_CMDLINE_LINUX_DEFAULT=" ... intel_iommu=on ..."
@@ -97,57 +90,73 @@ sudo grub-mkconfig -o /boot/grub/grub.cfg
 
 ## 4. Load Missing Modules
 
-In case something was not correctly loaded when checking IOMMU, we are going to load the missing modules.
+If any modules didn't load correctly during the IOMMU check, you'll need to load those missing modules manually.
 
-Create a file /etc/modules-load.d/vfio.conf
+To do this, create a new file ``/etc/modules-load.d/vfio.conf``.
 
-And write the modules
+In this file, you should list the names of the missing modules. This will ensure that these modules are loaded at boot time. The exact names of the modules will depend on your specific situation.
 
 ```Bash
 sudo nano /etc/modules-load.d/vfio.conf
+
+
+# Write this to file:
 
 vfio
 vfio_iommu_type1
 vfio_pci
 
+# In case of virtio, also:
+
+virtio
+virtio_blk
+virtio_pci
+virtio_net
+
 ```
 
 
-## 5. Isolate the GPU
+## 5. GPU Isolation
 
-We need to find the IDs for our GPU, since we are going to pass-through.
+The next step in setting up your virtual machine is to isolate the GPU, as we'll be using it for pass-through.
+
+### Identifying GPU IDs
+
+To identify your GPU IDs, use the following command:
 
 ```Bash
 lspci -nn
 ```
 
-We will find a lot of information, but we only need to pick both the NVIDIA Graphics and it's Audio.
+The output will contain a wealth of information, but we're only interested in the NVIDIA Graphics and its associated Audio device. For example:
 
 ```Bash
 01:00.0 VGA compatible controller [0300]: NVIDIA Corporation AD103 [GeForce RTX 4080] [10de:2704] (rev a1)
 01:00.1 Audio device [0403]: NVIDIA Corporation Device [10de:22bb] (rev a1)
-
 ```
 
-Now we create a file /etc/modprobe.d/vfio.conf 
+### Configuring VFIO
+
+Once you've identified the IDs, create a new file `/etc/modprobe.d/vfio.conf` and add the following lines:
 
 ```Bash
 options vfio-pci ids=10de:2704,10de:22bb
 softdep nvidia pre: vfio-pci
 ```
 
-I use my ids, from both the VGA and the Audio device, split by comma.
+Replace `10de:2704` and `10de:22bb` with the IDs of your VGA and Audio device, respectively, separated by a comma.
 
-The _softdep_ line is to make sure we isolate the GPU before the driver.
-
-
-
-## 6. After Reboot.
-
-We can check finally if everything we did is correct.
+The `softdep` line ensures that we isolate the GPU before the driver loads.
 
 
-Here is a nice script to check the IOMMU groups:
+
+## 6. Post-Reboot Validation
+
+After rebooting your system, it's crucial to verify that the changes you've made are correctly implemented.
+
+## IOMMU Group Check
+
+We'll start with a script to check the IOMMU groups:
 
 ```Bash
 #!/bin/bash
@@ -160,38 +169,40 @@ for g in $(find /sys/kernel/iommu_groups/* -maxdepth 0 -type d | sort -V); do
 done;
 ```
 
-If we execute this we can find if our GPU is in an isolated group. Mine's in group 13.
+Running this script will help you determine if your GPU is in an isolated group. In my case, it's in group 13.
 
 ```Bash
 IOMMU Group 13:
-	01:00.0 VGA compatible controller [0300]: NVIDIA Corporation AD103 [GeForce RTX 4080] [10de:2704] (rev a1)
-	01:00.1 Audio device [0403]: NVIDIA Corporation Device [10de:22bb] (rev a1)
-
+      01:00.0 VGA compatible controller [0300]: NVIDIA Corporation AD103 [GeForce RTX 4080] [10de:2704] (rev a1)
+      01:00.1 Audio device [0403]: NVIDIA Corporation Device [10de:22bb] (rev a1)
 ```
 
-Now we can check which driver is taking our NVIDIA.
+## Driver Check
+
+Next, let's verify which driver is handling our NVIDIA device:
 
 ```Bash
 lspci -nnk
 ```
 
-We should see that the driver in use is vfio-pci:
+The output should show that the `vfio-pci` driver is in use:
 
 ```Bash
 01:00.0 VGA compatible controller [0300]: NVIDIA Corporation AD103 [GeForce RTX 4080] [10de:2704] (rev a1)
-	Subsystem: Micro-Star International Co., Ltd. [MSI] Device [1462:5110]
-	Kernel driver in use: vfio-pci
-	Kernel modules: nouveau, nvidia_drm, nvidia
+Subsystem: Micro-Star International Co., Ltd. [MSI] Device [1462:5110]
+Kernel driver in use: vfio-pci
+Kernel modules: nouveau, nvidia_drm, nvidia
 01:00.1 Audio device [0403]: NVIDIA Corporation Device [10de:22bb] (rev a1)
-	Subsystem: Micro-Star International Co., Ltd. [MSI] Device [1462:5110]
-	Kernel driver in use: vfio-pci
-	Kernel modules: snd_hda_intel
-
+Subsystem: Micro-Star International Co., Ltd. [MSI] Device [1462:5110]
+Kernel driver in use: vfio-pci
+Kernel modules: snd_hda_intel
 ```
 
-This is cool, we can pass this GPU without issues!
+With these validations complete, you can be confident that your GPU is ready for pass-through!
 
-You can continue next to setting up the virtual machine! 
+You're now ready to proceed with setting up your virtual machine.
+
+
 
 
 

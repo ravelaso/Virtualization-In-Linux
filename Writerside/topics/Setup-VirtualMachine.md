@@ -1,29 +1,40 @@
 # Setting up virtual machine
 
-We need to install some packages:
+This guide provides the steps for setting up a virtual machine on your system. 
+Please follow the instructions carefully to ensure a successful setup.
+
+## Package Installation
+
+Begin by installing the necessary packages using the following command:
+
 
 ```Bash
 sudo pacman -S qemu-desktop dnsmasq virt-manager ebtables libvirt edk2-ovmf swtpm
 ```
 
-We will need to activate the default NAT network:
+## Network Configuration
+
+Next, activate the default NAT network with the following commands:
 
 ```Bash
 virsh net-autostart default
 virsh net-start default
 ```
 
-The process of setting up a virtual machine using virt-manager is mostly self-explanatory, as most of the process comes with fairly comprehensive on-screen instructions.
+## Virtual Machine Setup
 
-However, you should pay special attention to the following steps:
+Setting up a virtual machine using `virt-manager` is generally straightforward due to comprehensive on-screen instructions. However, you need to pay close attention to the following steps:
 
-- When the virtual machine creation wizard asks you to name your virtual machine (**final step before clicking "Finish"**), check the **"Customize before install" checkbox**.
-- Select the BIOS and search for the UEFI with secure-boot for our x64 platform.
-- In the "CPUs" section, adjust your socket, cores and threads per core, make sure to verify you are sending the correct setup.
+(Note: If you plan to use virtio for your main disk, configure it at this point, [Virtio](https://wiki.archlinux.org/title/QEMU#Installing_virtio_drivers))
 
-Since we are installing Windows 11, we need also a TPM2.
-Since we installed _swtpm_, we can "Add Hardware" and we should see a TPM2 Emulator.
+1. During the virtual machine creation process, you will be prompted to give a name to your virtual machine. At this stage (**the final step before clicking "Finish"**), ensure to tick the **"Customize before install" checkbox**
 
-(Check also if you want to use virtio for your main disk now)
+2. Next, select the BIOS and search for the UEFI with secure-boot for our x64 platform (Should be a .fd file)
 
-Then we are ready to install the OS as normal.
+3. In the "CPUs" section, carefully adjust your socket, cores and threads per core. Ensure the settings are correct before proceeding
+
+## Windows 11 Installation
+
+Since we are installing Windows 11, it is important to note that TPM2 is required. Thankfully, we have already installed the \`swtpm\` package for this purpose. In the "Add Hardware" section, you should find a TPM2 Emulator.
+
+Now you're all set to install the operating system as usual.

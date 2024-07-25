@@ -1,27 +1,24 @@
 # VM Configuration
 
-Now we are going to configure the VM.
+Now that your GPU is ready for pass-through, it's time to configure your virtual machine.
 
-First of all, shut down your VM!
+Before starting, make sure your VM is shut down!
 
-We need to set up Virt-Manager under Settings or Preferences, to allow us to edit XML.
+You'll need to set up Virt-Manager under Settings or Preferences to enable XML editing.
 
+## Mouse & Keyboard Setup (evdev)
 
-## Mouse & Keyboard (evdev)
+Let's begin with the mouse and keyboard configuration.
 
-We are going to tackle the mouse and keyboard.
+Currently, we are using Spice and a virtual monitor (QXL), which captures the mouse and keyboard inputs. However, we'll switch to using evdev, a more consistent method for tracking peripherals.
 
-Right now we have Spice and a virtual monitor for us, which captures the mouse and keyboard, 
-However I will send both the mouser and keyboard using evdev, 
-which provides a consistent way of tracking the peripherals
-
-First, we get the devices IDs:
+First, we'll identify the device IDs:
 
 ```Bash
 ls -l /dev/input/by-id/
 ```
 
-You will get something like this:
+Your output might look something like this:
 
 ```Bash
 lrwxrwxrwx 1 root root 10 Jul 24 19:57 usb-Corsair_CORSAIR_HS80_MAX_WIRELESS_Gaming_Receiver_592466F35C4EC86F-event-if03 -> ../event24
@@ -38,33 +35,31 @@ lrwxrwxrwx 1 root root 10 Jul 24 19:57 usb-Razer_Razer_Viper_Ultimate_0000000000
 lrwxrwxrwx 1 root root  9 Jul 24 19:57 usb-Razer_Razer_Viper_Ultimate_000000000000-mouse -> ../mouse0
 ```
 
-I'm going to use my MonsGeek keyboard and my Razer Viper mouse. For that we need to look at the event name of each one.
-In my case they are:
+For this guide, we'll use the MonsGeek keyboard and Razer Viper mouse. To do this, we need to identify each device's event name. In our case, they are:
 
 ```Bash
 usb-Razer_Razer_Viper_Ultimate_000000000000-event-mouse
 usb-monsgeek_MonsGeek_Keyboard-event-kbd
 ```
 
-**IMPORTANT**
+>**IMPORTANT:**
+>
+>Some devices might have additional events. For instance, my keyboard has an additional event:
+>
+>**usb-monsgeek_MonsGeek_Keyboard-if02-event-kbd**
+>
+>When adding these devices, you may find that only the keyboard is passed back to the host, not the mouse. If this happens, try using the if02 event of the keyboard. In our case, we need it, so we'll use it from now on.
 
-Some devices will have other event like my keyboard has: **usb-monsgeek_MonsGeek_Keyboard-if02-event-kbd**
 
-Sometimes when adding these devices, and we want to get back the mouse and keyboard to the host, it will only pass the keyboard and not the mouse.
+### Modifying the VM XML File
 
-For that, we need to experiment, usually it is the if02 event of the keyboard.
-In my case, I need it, so I will use it from now on.
-
-#### Configure the VM XML file.
-
-Now that we have our devices, we will edit the VM using xml. 
-(We can use a command or the virt-manager editor)
+With our devices identified, we can now modify the XML configuration of the VM. You can do this either with a command or using the Virt-Manager editor.
 
 ```Bash
 sudo EDITOR=nano virsh edit nameofyourvm
 ```
 
-We will add this configuration:
+We're going to add the following configuration:
 
 ```XML
 ...
@@ -83,32 +78,33 @@ We will add this configuration:
   </devices>
 ```
 
-You can see my if02-event-kbd has the options grab grabToggle and repeat, this is the device which recognized better in my machine.
-Instead of the regular -event-kbd. For you, it might work with the regular one, or you might have to use one of the if02.
+You'll notice that my `if02-event-kbd` device has the `grab`, `grabToggle`, and `repeat` options. 
+This is because this device is better recognized on my machine compared to the standard `-event-kbd`. 
+You might find that the standard device works for you, or you might need to use one of the `if02` devices.
 
-In either case, you need to also pass the default -event-kbd if you needed the if02 as you see in my example.
+Regardless, if you needed to use the `if02` device, you also need to pass the default `-event-kbd`, as shown in my example.
 
+### Verification
 
-#### Check
-
-If we boot the machine now, the VM will take instantly control over our mouse and keyboard, if you press ``CTRL + CTRL``, both CTRL buttons on your keyboard, the mouse and keyboard should respond back in the host. If that is not the case, please check the step before.
-
+If you boot the machine now, the VM will immediately take control of your mouse and keyboard.
+By pressing `CTRL + CTRL` (both CTRL keys on your keyboard at the same time), the mouse and keyboard should revert back to the host. If this doesn't happen, please revisit the previous step.
 
 ## GPU pass-through
 
-This is actually an easy one, we just isolated the graphics card, so we can just go over the GUI (virt-manager), click on 
-'Add Hardware' and select "PCI Host Device", we should find our NVIDIA VGA and its Audio Device, we need to add both.
+Passing through the GPU is a straightforward process, thanks to the previous isolation steps. 
+Simply open the GUI (Virt-Manager), click on 'Add Hardware', and select "PCI Host Device". 
+Here, you should find your NVIDIA VGA and its Audio Device. Make sure to add both.
 
-Now the VM will have direct access to it.
+With these steps, the VM will now have direct access to the GPU.
 
 
 ## Disable Virtual Monitor
 
-In my setup I use a DisplayPort cable connected to my monitor second input, 
-so I do not need to see or have a screen sharing of the machine.
+If your setup includes a second input to your monitor via a DisplayPort cable, 
+you might not need a virtual monitor or screen sharing for your machine. 
+In this case, you can disable Spice and the virtual monitor.
 
-Therefore, I will disable spice, and the monitor (virtual one).
-For that, we need to remove these entries from the XML all at once.
+To do this, you'll need to remove the following entries from the XML file:
 
 ```xml
 ...
@@ -131,12 +127,12 @@ For that, we need to remove these entries from the XML all at once.
 
 ```
 
-Save the file and start your machine again, 
-nothing will display but your external monitor should show you still the DisplayPort signal, with only that monitor. (Physical)
+Once these entries are removed, save the file and start your machine again. 
+While nothing will display on the virtual monitor, your external monitor should continue to show the DisplayPort signal on the physical monitor.
 
 ## Include Virtio Disks
 
-If you have installed Virtio drivers from redhat / fedora binaries to your window's machine. Check [Wiki Virtio](https://wiki.archlinux.org/title/QEMU#Installing_virtio_drivers)
+If you have installed Virtio drivers from redhat / fedora binaries to your window's machine. ( Check [Wiki Virtio](https://wiki.archlinux.org/title/QEMU#Installing_virtio_drivers) )
 You can hook up any other internal drivers you have to that machine like this:
 
 ```xml
@@ -150,18 +146,24 @@ You can hook up any other internal drivers you have to that machine like this:
 </controller>
 ```
 
-If you get an error about io threads add also this line:
+Make sure you identify your correct disk by id:
 
-```xml
-<iothreads>1</iothreads>
-```
+````Bash
+ls -l /dev/disk/by-id/
+````
+
+>If you get an error about ``io threads`` after saving the file, add also this line:
+>
+>```xml
+><iothreads>1</iothreads>
+>```
 
 
 ## Get Audio from Guest to your Host
 
 If we want to hear the audio from the guest to the host, we can use PipeWire.
 
-We can add this to our XML config:
+We can add this to your XML config:
 
 ```xml
 <audio id="1" type="pipewire" runtimeDir="/run/user/1000">
