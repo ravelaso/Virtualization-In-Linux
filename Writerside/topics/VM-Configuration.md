@@ -10,10 +10,12 @@ We need to set up Virt-Manager under Settings or Preferences, to allow us to edi
 ## Mouse & Keyboard (evdev)
 
 We are going to tackle the mouse and keyboard.
-Right now we have Spice and a virtual monitor to us, which captures the mouse and keyboard, 
-however is best to send them using evdev.
 
-Firs we need to get the devices ID of our mouse and keyboard:
+Right now we have Spice and a virtual monitor for us, which captures the mouse and keyboard, 
+However I will send both the mouser and keyboard using evdev, 
+which provides a consistent way of tracking the peripherals
+
+First, we get the devices IDs:
 
 ```Bash
 ls -l /dev/input/by-id/
@@ -36,7 +38,7 @@ lrwxrwxrwx 1 root root 10 Jul 24 19:57 usb-Razer_Razer_Viper_Ultimate_0000000000
 lrwxrwxrwx 1 root root  9 Jul 24 19:57 usb-Razer_Razer_Viper_Ultimate_000000000000-mouse -> ../mouse0
 ```
 
-Im going to use my MonsGeek keyboard and my Razer Viper mouse. For that we need to look at the event name of each one.
+I'm going to use my MonsGeek keyboard and my Razer Viper mouse. For that we need to look at the event name of each one.
 In my case they are:
 
 ```Bash
@@ -55,7 +57,8 @@ In my case, I need it, so I will use it from now on.
 
 #### Configure the VM XML file.
 
-Now that we have our devices, we will edit the VM using xml. (We can use a command or the virt-manager editor)
+Now that we have our devices, we will edit the VM using xml. 
+(We can use a command or the virt-manager editor)
 
 ```Bash
 sudo EDITOR=nano virsh edit nameofyourvm
@@ -63,7 +66,7 @@ sudo EDITOR=nano virsh edit nameofyourvm
 
 We will add this configuration:
 
-```xml
+```XML
 ...
   <devices>
     ...
@@ -81,7 +84,7 @@ We will add this configuration:
 ```
 
 You can see my if02-event-kbd has the options grab grabToggle and repeat, this is the device which recognized better in my machine.
-Instead of the regular -event-kbd. For you it might work with the regular one or you might have to use one of the if02.
+Instead of the regular -event-kbd. For you, it might work with the regular one, or you might have to use one of the if02.
 
 In either case, you need to also pass the default -event-kbd if you needed the if02 as you see in my example.
 
