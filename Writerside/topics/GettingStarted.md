@@ -202,6 +202,60 @@ With these validations complete, you can be confident that your GPU is ready for
 
 You're now ready to proceed with setting up your virtual machine.
 
+## Troubleshooting
+{collapsible="true" default-state="collapsed"}
+
+Sometimes you will see the driver being hooked to nvidia instead of vfio-pci.
+There are other alternatives to hook the vfio-pci or load the modules.
+
+<tabs>
+<tab title="1. Grub">
+One option is to use Grub and specify the IDs of the hardware to the vfio-pci:
+
+1. Edit `/etc/default/grub`
+      
+2. Add `vfio-pci.ids=` followed by your Graphic and Audio IDs
+
+```Bash
+GRUB_CMDLINE_LINUX_DEFAULT="... intel_iommu=on vfio-pci.ids=10de:2704,10de:22bb  ..."
+```
+
+3. Update grub:
+
+```Bash
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+```
+
+4. Reboot
+
+</tab>
+
+<tab title="2. Modules">
+Another option is to add the modules to mkinitcpio:
+
+1. Edit: `/etc/mkinitcpio.conf`
+
+```Bash
+MODULES=(... vfio_pci vfio vfio_iommu_type1 ...)
+
+HOOKS=(... modconf ...)
+
+```
+
+2. Rebuild:
+
+```Bash
+sudo mkinitcpio -P
+```
+
+3. Reboot
+
+</tab>
+</tabs>
+
+After these steps you should see modules loading and vfio-pci as the driver for your GPU.
+
+
 
 
 
