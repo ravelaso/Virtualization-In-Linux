@@ -18,7 +18,7 @@ Next, activate the default NAT network with the following commands:
 
 ```Bash
 virsh net-autostart default
-virsh net-start default
+virsh net-start default     
 ```
 
 ## Virtual Machine Setup

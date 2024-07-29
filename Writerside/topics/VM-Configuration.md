@@ -100,8 +100,9 @@ With these steps, the VM will now have direct access to the GPU.
 
 ## Disable Virtual Monitor
 
-If your setup includes a second input to your monitor via a DisplayPort cable, 
+If your setup includes a second input to your monitor via a DisplayPort / HDMI cable, 
 you might not need a virtual monitor or screen sharing for your machine. 
+Otherwise, you will have 2 Display Screens in your Windows VM.
 In this case, you can disable Spice and the virtual monitor.
 
 To do this, you'll need to remove the following entries from the XML file:
@@ -128,7 +129,7 @@ To do this, you'll need to remove the following entries from the XML file:
 ```
 
 Once these entries are removed, save the file and start your machine again. 
-While nothing will display on the virtual monitor, your external monitor should continue to show the DisplayPort signal on the physical monitor.
+While nothing will display on the virtual monitor, your external monitor should continue to show the DisplayPort / HDMI signal on the physical monitor.
 
 ## Include Virtio Disks
 
@@ -174,6 +175,12 @@ We can add this to your XML config:
 
 Of course make sure you are user 1000 or set the user yourself.
 
+> If you get error "Failed to initialize PW context"
+> You can modify qemu config to use your user: `/etc/libvirt/qemu.conf`
+> ```Bash
+>user = "example"
+> ```
+> You can also make sure you user is part of libvirt or qemu groups.
 
 
 
